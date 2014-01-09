@@ -1,5 +1,5 @@
 #include <gst/gst.h>
-#include <stdlib.h>
+//#include <stdlib.h>
 
 typedef struct _player {
   GMainLoop *loop;
@@ -14,7 +14,7 @@ typedef struct _player {
   GstElement *sink;
 } Player;
 
-static void sig_handler(gpointer data)
+static void sigint_handler(gpointer data)
 {
   Player *player = data;
   g_print("\b\bTi\nGood bye!\n");
@@ -58,8 +58,7 @@ static gboolean cb_print_position(GstElement *pipeline)
 
   if (gst_element_query_position (pipeline, GST_FORMAT_TIME, &pos)
       && gst_element_query_duration (pipeline, GST_FORMAT_TIME, &len)) {
-    g_print ("Time: %" GST_TIME_FORMAT "\b\b\b\b\b\b\b\b / %" GST_TIME_FORMAT "\b\b\b\b\b\b\b\b         \r",
-        GST_TIME_ARGS (pos), GST_TIME_ARGS (len));
+    g_print ("Time: %" GST_TIME_FORMAT "\b\b\b\b\b\b\b\b / %" GST_TIME_FORMAT "\b\b\b\b\b\b\b\b         \r", GST_TIME_ARGS (pos), GST_TIME_ARGS (len));
   }
   /* call me again */
   return TRUE;
@@ -117,7 +116,7 @@ gint main(gint argc, gchar *argv[])
   gst_init(&argc, &argv);
   player->loop = g_main_loop_new(NULL, FALSE);
 
-  g_unix_signal_add(SIGINT, sig_handler, player);
+  g_unix_signal_add(SIGINT, sigint_handler, player);
 
   player->source = gst_element_factory_make("filesrc", "filesrc0");
   g_object_set(G_OBJECT(player->source), "location", argv[1], NULL);
@@ -159,8 +158,11 @@ gint main(gint argc, gchar *argv[])
   gst_object_unref(player->bus);
 
   ret = gst_element_set_state(player->pipeline, GST_STATE_PLAYING);
-  g_timeout_add (200, (GSourceFunc) cb_print_position, player->pipeline);
+  g_timeout_add (100, (GSourceFunc) cb_print_position, player->pipeline);
+  
   g_main_loop_run(player->loop);
+  GST_DEBUG_BIN_TO_DOT_FILE(GST_BIN(player->pipeline), 0, "dump_pipeline");
+
   if(ret == GST_STATE_CHANGE_FAILURE)
   {
     g_printerr("Unable to set pipeline to the playing state.\n");
