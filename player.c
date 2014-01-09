@@ -21,6 +21,37 @@ static void sig_handler(gpointer data)
   g_main_loop_quit(player->loop);
 }
 
+static gboolean bus_watcher(GstBus *bus, GstMessage *message, gpointer data)
+{
+  Player *player = data;
+  switch(GST_MESSAGE_TYPE(message))
+  {
+    case GST_MESSAGE_ERROR:
+    {
+      GError *err;
+      gchar *debug;
+      gst_message_parse_error (message, &err, &debug);
+      g_print ("Error: %s\n", err->message);
+      g_error_free (err);
+      g_free (debug);
+      g_print("\b\bTi\nGood bye!\n");
+      g_main_loop_quit (player->loop);
+      break;
+    }
+    case GST_MESSAGE_EOS:
+    {
+      /* end-of-stream */
+      g_print("\b\bTi\nGood bye!\n");
+      g_main_loop_quit (player->loop);
+      break;
+    }
+    default:
+      /* unhandled message */
+      break;
+  }
+  return TRUE;
+}
+
 static gboolean cb_print_position(GstElement *pipeline)
 {
   gint64 pos, len;
@@ -64,7 +95,6 @@ static void cb_newpad(GstElement *decoder, GstPad *pad, gpointer data)
 
 static gboolean player_free(Player *player)
 {
-  gst_object_unref(player->bus);
   gst_element_set_state(player->pipeline, GST_STATE_NULL);
   gst_object_unref(player->pipeline);
   g_free(player);
@@ -72,9 +102,15 @@ static gboolean player_free(Player *player)
 
 gint main(gint argc, gchar *argv[])
 {
+  if(argc<2)
+  {
+    g_print("\tUsage: ./player <path to audiofile>\n");
+    return 1;
+  }
+
   Player *player = g_new(Player, 1);
 
-  GstMessage *msg;
+  guint bus_watch_id;
 
   GstStateChangeReturn ret;
 
@@ -118,6 +154,10 @@ gint main(gint argc, gchar *argv[])
     return -1;
   }
 
+  player->bus = gst_element_get_bus(player->pipeline);
+  bus_watch_id = gst_bus_add_watch(player->bus, bus_watcher, player);
+  gst_object_unref(player->bus);
+
   ret = gst_element_set_state(player->pipeline, GST_STATE_PLAYING);
   g_timeout_add (200, (GSourceFunc) cb_print_position, player->pipeline);
   g_main_loop_run(player->loop);
@@ -128,8 +168,6 @@ gint main(gint argc, gchar *argv[])
     g_free(player);
     return -1;
   }
-
-  player->bus = gst_element_get_bus(player->pipeline);
 
   player_free(player);
   return 0;
