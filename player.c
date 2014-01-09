@@ -4,6 +4,8 @@
 typedef struct _player {
   GMainLoop *loop;
 
+  GstBus *bus;
+
   GstElement *pipeline;
   GstElement *source;
   GstElement *decoder;
@@ -60,11 +62,18 @@ static void cb_newpad(GstElement *decoder, GstPad *pad, gpointer data)
   g_object_unref(audiopad);
 }
 
+static gboolean player_free(Player *player)
+{
+  gst_object_unref(player->bus);
+  gst_element_set_state(player->pipeline, GST_STATE_NULL);
+  gst_object_unref(player->pipeline);
+  g_free(player);
+}
+
 gint main(gint argc, gchar *argv[])
 {
   Player *player = g_new(Player, 1);
 
-  GstBus *bus;
   GstMessage *msg;
 
   GstStateChangeReturn ret;
@@ -120,11 +129,8 @@ gint main(gint argc, gchar *argv[])
     return -1;
   }
 
-  bus = gst_element_get_bus(player->pipeline);
+  player->bus = gst_element_get_bus(player->pipeline);
 
-  gst_object_unref(bus);
-  gst_element_set_state(player->pipeline, GST_STATE_NULL);
-  gst_object_unref(player->pipeline);
-  g_free(player);
+  player_free(player);
   return 0;
 }
