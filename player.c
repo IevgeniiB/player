@@ -166,7 +166,14 @@ gint main(gint argc, gchar *argv[])
 
   g_unix_signal_add(SIGINT, sigint_handler, player);
 
-  player->source = gst_element_factory_make("filesrc", "filesrc0");
+  if(g_strrstr(argv[1], "http"))
+  {
+    player->source = gst_element_factory_make("souphttpsrc", "httpsrc0");
+  }
+  else
+  {
+    player->source = gst_element_factory_make("filesrc", "filesrc0");
+  }
   g_object_set(G_OBJECT(player->source), "location", argv[1], NULL);
   player->decoder = gst_element_factory_make("decodebin", "decoder0");
   g_signal_connect(player->decoder, "pad-added", G_CALLBACK(cb_newpad), player);
