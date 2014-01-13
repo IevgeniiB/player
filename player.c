@@ -64,6 +64,39 @@ static gboolean cb_print_position(GstElement *pipeline)
   return TRUE;
 }
 
+static void print_one_tag (const GstTagList * list, const gchar * tag, gpointer user_data)
+{
+  int i, num;
+  num = gst_tag_list_get_tag_size (list, tag);
+  for (i = 0; i < num; ++i) {
+    const GValue *val;
+    /* Note: when looking for specific tags, use the gst_tag_list_get_xyz() API,
+     * * we only use the GValue approach here because it is more generic */
+    val = gst_tag_list_get_value_index (list, tag, i);
+    if (G_VALUE_HOLDS_STRING (val)) {
+      g_print ("\t%20s : %s\n", tag, g_value_get_string (val));
+    } else if (G_VALUE_HOLDS_UINT (val)) {
+      g_print ("\t%20s : %u\n", tag, g_value_get_uint (val));
+    } else if (G_VALUE_HOLDS_DOUBLE (val)) {
+      g_print ("\t%20s : %g\n", tag, g_value_get_double (val));
+    } else if (G_VALUE_HOLDS_BOOLEAN (val)) {
+      g_print ("\t%20s : %s\n", tag,
+          (g_value_get_boolean (val)) ? "true" : "false");
+    } else if (GST_VALUE_HOLDS_BUFFER (val)) {
+      GstBuffer *buf = gst_value_get_buffer (val);
+      guint buffer_size = gst_buffer_get_size (buf);
+      g_print ("\t%20s : buffer of size %u\n", tag, buffer_size);
+    } else if (GST_VALUE_HOLDS_DATE_TIME (val)) {
+      GstDateTime *dt = g_value_get_boxed (val);
+      gchar *dt_str = gst_date_time_to_iso8601_string (dt);
+      g_print ("\t%20s : %s\n", tag, dt_str);
+      g_free (dt_str);
+    } else {
+      g_print ("\t%20s : tag of type ’%s’\n", tag, G_VALUE_TYPE_NAME (val));
+    }
+  }
+}
+
 static void cb_newpad(GstElement *decoder, GstPad *pad, gpointer data)
 {
   Player *player = data;
@@ -103,7 +136,7 @@ gint main(gint argc, gchar *argv[])
 {
   if(argc<2)
   {
-    g_print("\tUsage: ./player <path to audiofile>\n");
+    g_print("\tUsage: %s <path to audiofile>\n", argv[0]);
     return 1;
   }
 
@@ -111,6 +144,7 @@ gint main(gint argc, gchar *argv[])
 
   guint bus_watch_id;
 
+  GstMessage *msg;
   GstStateChangeReturn ret;
 
   gst_init(&argc, &argv);
@@ -158,6 +192,21 @@ gint main(gint argc, gchar *argv[])
   gst_object_unref(player->bus);
 
   ret = gst_element_set_state(player->pipeline, GST_STATE_PLAYING);
+
+  GstTagList *tags = NULL;
+  msg = gst_bus_timed_pop_filtered (GST_ELEMENT_BUS (player->pipeline), GST_CLOCK_TIME_NONE, GST_MESSAGE_TAG);
+  gst_message_parse_tag (msg, &tags);
+  gst_tag_list_foreach (tags, print_one_tag, NULL);
+  g_print ("\n");
+  gst_tag_list_unref (tags);
+
+  msg = gst_bus_timed_pop_filtered (GST_ELEMENT_BUS (player->pipeline), GST_CLOCK_TIME_NONE, 
+      GST_MESSAGE_ASYNC_DONE | GST_MESSAGE_ERROR);
+
+  if (GST_MESSAGE_TYPE (msg) == GST_MESSAGE_ERROR)
+    g_error ("Got error");
+
+  gst_message_unref (msg);
   g_timeout_add (100, (GSourceFunc) cb_print_position, player->pipeline);
   
   g_main_loop_run(player->loop);
