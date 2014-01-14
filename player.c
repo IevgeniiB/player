@@ -1,5 +1,5 @@
 #include <gst/gst.h>
-//#include <stdlib.h>
+#include "./player.h"
 
 typedef struct _player {
   GMainLoop *loop;
@@ -11,6 +11,7 @@ typedef struct _player {
   GstElement *decoder;
   GstElement *audioconv;
   GstElement *resampler;
+  GstElement *volume;
   GstElement *sink;
 } Player;
 
@@ -146,6 +147,22 @@ static gboolean player_free(Player *player)
   g_free(player);
 }
 
+void *play_pause(void *arg)
+{
+  Player *player = arg;
+  if(GST_STATE(player->pipeline) == GST_STATE_PLAYING)
+  {
+    gst_element_set_state(player->pipeline, GST_STATE_PAUSED);
+  }
+  else if(GST_STATE(player->pipeline) == GST_STATE_PAUSED)
+  {
+    gst_element_set_state(player->pipeline, GST_STATE_PLAYING);
+  }
+  else
+    g_print("play-pause exception\n");
+}
+
+
 gint main(gint argc, gchar *argv[])
 {
   if(argc<2)
@@ -153,6 +170,9 @@ gint main(gint argc, gchar *argv[])
     g_print("\tUsage: %s <path to audiofile>\n", argv[0]);
     return 1;
   }
+
+  Keyboard_cb *key_cb = (Keyboard_cb *)calloc(1, sizeof(Keyboard_cb));
+  pthread_t thread;
 
   Player *player = g_new(Player, 1);
 
@@ -179,18 +199,19 @@ gint main(gint argc, gchar *argv[])
   g_signal_connect(player->decoder, "pad-added", G_CALLBACK(cb_newpad), player);
   player->audioconv = gst_element_factory_make("audioconvert", "audioconv0");
   player->resampler = gst_element_factory_make("audioresample", "resampler0");
+  player->volume = gst_element_factory_make("volume", "volume0");
   player->sink = gst_element_factory_make("autoaudiosink", "sink0");
   player->pipeline = gst_pipeline_new("player-pipeline");
 
   if (!player->pipeline || !player->source || !player->decoder || 
-      !player->audioconv || !player->resampler || !player->sink)
+      !player->audioconv || !player->resampler || !player->volume || !player->sink)
   {
     g_printerr("Not all elements could be created.\n");
     return -1;
   }
 
   gst_bin_add_many (GST_BIN(player->pipeline), player->source, player->decoder, 
-      player->audioconv, player->resampler, player->sink, NULL);
+      player->audioconv, player->resampler, player->volume, player->sink, NULL);
 
   if (!gst_element_link_many(player->source, player->decoder, NULL))
   {
@@ -200,7 +221,7 @@ gint main(gint argc, gchar *argv[])
     return -1;
   }
 
-  if (!gst_element_link_many(player->audioconv, player->resampler, player->sink, NULL))
+  if (!gst_element_link_many(player->audioconv, player->resampler, player->volume, player->sink, NULL))
   {
     g_printerr("Audioconvert, Resampler and Sink could not be linked.\n");
     gst_object_unref(player->pipeline);
@@ -231,6 +252,12 @@ gint main(gint argc, gchar *argv[])
   gst_message_unref (msg);
   g_timeout_add (100, (GSourceFunc) cb_print_position, player->pipeline);
   
+  key_cb->end = play_pause;
+  key_cb->data = player;
+
+  pthread_create(&thread, NULL, keyboard_thread, key_cb);
+  pthread_join(thread, NULL);
+
   g_main_loop_run(player->loop);
   GST_DEBUG_BIN_TO_DOT_FILE(GST_BIN(player->pipeline), 0, "dump_pipeline");
 
