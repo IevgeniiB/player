@@ -38,6 +38,7 @@ void print(const char *string)
 void *keyboard_thread(void *arg)
 {
   Keyboard_cb *key_cb = arg;
+  Player *player = key_cb->data;
   int key;
 
   for (;;) {
@@ -111,6 +112,8 @@ key_handle:
       }
       printf("0x%02x\n", key);
     }
+    if(!player->thread_run)
+      g_thread_exit(NULL);
   }
 }
 /*

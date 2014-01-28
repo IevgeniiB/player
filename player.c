@@ -1,24 +1,11 @@
-#include <gst/gst.h>
+#include <stdlib.h>
 #include "./player.h"
-
-typedef struct _player {
-  GMainLoop *loop;
-
-  GstBus *bus;
-
-  GstElement *pipeline;
-  GstElement *source;
-  GstElement *decoder;
-  GstElement *audioconv;
-  GstElement *resampler;
-  GstElement *volume;
-  GstElement *sink;
-} Player;
 
 static void sigint_handler(gpointer data)
 {
   Player *player = data;
   g_print("\b\bTi\nGood bye!\n");
+  player->thread_run = FALSE;
   g_main_loop_quit(player->loop);
 }
 
@@ -172,9 +159,9 @@ gint main(gint argc, gchar *argv[])
   }
 
   Keyboard_cb *key_cb = (Keyboard_cb *)calloc(1, sizeof(Keyboard_cb));
-  pthread_t thread;
 
   Player *player = g_new(Player, 1);
+  player->thread_run = TRUE;
 
   guint bus_watch_id;
 
@@ -255,8 +242,8 @@ gint main(gint argc, gchar *argv[])
   key_cb->end = play_pause;
   key_cb->data = player;
 
-  pthread_create(&thread, NULL, keyboard_thread, key_cb);
-  pthread_join(thread, NULL);
+  player->thread = g_thread_new("player_thread", keyboard_thread, key_cb);
+//  pthread_join(thread, NULL);
 
   g_main_loop_run(player->loop);
   GST_DEBUG_BIN_TO_DOT_FILE(GST_BIN(player->pipeline), 0, "dump_pipeline");
