@@ -57,35 +57,36 @@ key_handle:
           {
             case 0x32:
               key_cb->insert(key_cb->data);
-              printf("Insert\n");
+              // "Insert"
               getkey();
               break;
             case 0x33:
-              printf("Delete\n");
+              // "Delete"
               getkey();
               break;
             case 0x35:
-              printf("Page Up\n");
+              // "Page Up"
               getkey();
               break;
             case 0x36:
-              printf("Page Down\n");
+              // "Page Down"
               getkey();
               break;
             case 0x41:
-              printf("Up\n");
+              // "Up"
               break;
             case 0x42:
-              printf("Down\n");
+              // "Down"
               break;
             case 0x43:
-              printf("Right\n");
+              // "Right"
               break;
             case 0x44:
-              printf("Left\n");
+              // "Left"
               break;
             default:
-              printf("Default case\n");
+              break;
+              // "Default case"
           }
           continue;
         }
@@ -95,22 +96,24 @@ key_handle:
           switch(key)
           {
             case 0x48:
-              printf("Home\n");
+              // "Home"
               break;
             case 0x46:
               key_cb->end(key_cb->data);
               break;
             default:
-              printf("Default case\n");
+              break;
+              // "Default case"
           }
           continue;
         }
         else if(key == -1)
           goto key_handle;
         else
-          printf("After escape: 0x%02x\n", key);
+        {
+          //printf("After escape: 0x%02x\n", key);
+        }
       }
-      printf("0x%02x\n", key);
     }
     if(!player->thread_run)
       g_thread_exit(NULL);
