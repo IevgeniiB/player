@@ -24,11 +24,15 @@ typedef struct {
 } Player;
 
 gboolean player_init(Player *player, const gchar *arg);
-void play_pause(Player *player);
+gboolean player_play_pause(Player *player);
+gboolean player_play(Player *player);
+gboolean player_pause(Player *player);
 gboolean player_free(Player *player);
 gboolean player_key_handle_init(Player* player);
 void sigint_handler(Player *player);
 gboolean print_tags(Player *player);
 gboolean cb_print_position(Player *player);
+gint player_get_volume(Player *player);
+gboolean player_set_volume(Player *player, gint volume);
 
 #endif

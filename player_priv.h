@@ -29,8 +29,12 @@ static void print_one_tag (const GstTagList *, const gchar *, gpointer);
 static void cb_newpad(GstElement *, GstPad *, gpointer);
 gboolean player_init_priv(Player *, const gchar *);
 gboolean print_tags_priv(Player *);
-void play_pause_priv(void *);
-gboolean player_key_handle_initi_priv(Player *);
+gboolean player_play_pause_priv(Player *);
+gboolean player_play_priv(Player *);
+gboolean player_pause_priv(Player *);
+gboolean player_key_handle_init_priv(Player *);
 gboolean player_free_priv(Player *);
+gint player_get_volume_priv(Player *);
+gboolean player_set_volume_priv(Player *, gint volume);
 
 #endif

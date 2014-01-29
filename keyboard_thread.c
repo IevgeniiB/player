@@ -4,7 +4,7 @@
 #include <termios.h>
 #include <time.h>
 #include <pthread.h>
-#include "player.h"
+#include "player_priv.h"
 
 
 int getkey() {
@@ -29,12 +29,7 @@ int getkey() {
 
   return character;
 }
-/*
-void print(const char *string)
-{
-  printf("hello, %s", string);
-}
-*/
+
 void *keyboard_thread(void *arg)
 {
   Keyboard_cb *key_cb = arg;
@@ -45,7 +40,6 @@ void *keyboard_thread(void *arg)
     key = getkey();
     
 key_handle:
-
     if(key != -1) {
       if(key == 0x1b)
       {
@@ -66,10 +60,12 @@ key_handle:
               break;
             case 0x35:
               // "Page Up"
+              key_cb->pageup(key_cb->data);
               getkey();
               break;
             case 0x36:
               // "Page Down"
+              key_cb->pagedown(key_cb->data);
               getkey();
               break;
             case 0x41:
@@ -99,6 +95,7 @@ key_handle:
               // "Home"
               break;
             case 0x46:
+              // "End"
               key_cb->end(key_cb->data);
               break;
             default:
@@ -116,19 +113,9 @@ key_handle:
       }
     }
     if(!player->thread_run)
+    {
+      free(arg);
       g_thread_exit(NULL);
+    }
   }
 }
-/*
-int main()
-{
-  Keyboard_cb *key_cb = (Keyboard_cb *)calloc(1, sizeof(Keyboard_cb));
-  key_cb->insert = print;
-  key_cb->data = "i.baliuk";
-
-  pthread_t thread;
-  pthread_create(&thread, NULL, keyboard_thread, key_cb);
-  pthread_join(thread, NULL);
-
-  return 0;
-}*/

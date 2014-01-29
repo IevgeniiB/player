@@ -208,25 +208,42 @@ gboolean print_tags_priv(Player *player)
   return TRUE;
 }
 
-void play_pause_priv(void *arg)
+gboolean player_play_pause_priv(Player *player)
 {
-  Player *player = arg;
   if(GST_STATE(player->pipeline) == GST_STATE_PLAYING)
   {
     gst_element_set_state(player->pipeline, GST_STATE_PAUSED);
+    return TRUE;
   }
   else if(GST_STATE(player->pipeline) == GST_STATE_PAUSED)
   {
     gst_element_set_state(player->pipeline, GST_STATE_PLAYING);
+    return TRUE;
   }
   else
+  {
     g_printerr("play-pause exception");
+    return FALSE;
+  }
 }
 
-gboolean player_key_handle_initi_priv(Player *player)
+void volume_increase(Player* player)
+{
+  player_set_volume_priv(player, player_get_volume_priv(player) + 10);
+}
+
+void volume_decrease(Player* player)
+{
+  player_set_volume_priv(player, player_get_volume_priv(player) - 10);
+}
+
+gboolean player_key_handle_init_priv(Player *player)
 {
   Keyboard_cb *key_cb = (Keyboard_cb *)calloc(1, sizeof(Keyboard_cb));
-  key_cb->end = play_pause_priv;
+  key_cb->end = (void *)player_play_pause_priv;
+  key_cb->pageup = (void *)volume_increase;
+  key_cb->pagedown = (void *)volume_decrease;
+
   key_cb->data = player;
 
   player->thread = g_thread_new("player_thread", keyboard_thread, key_cb);
@@ -241,3 +258,61 @@ gboolean player_free_priv(Player *player)
   g_free(player);
   return TRUE;
 }
+
+gboolean player_play_priv(Player *player)
+{
+  if(GST_STATE(player->pipeline) == GST_STATE_PLAYING)
+  {
+    g_print("Already in playing state\n");
+    return FALSE;
+  }
+  else if(GST_STATE(player->pipeline) == GST_STATE_PAUSED)
+  {
+    gst_element_set_state(player->pipeline, GST_STATE_PLAYING);
+    return TRUE;
+  }
+  else
+  {
+    g_printerr("Unexpected state of pipeline (play function)");
+    return FALSE;
+  }
+}
+
+gboolean player_pause_priv(Player *player)
+{
+  if(GST_STATE(player->pipeline) == GST_STATE_PAUSED)
+  {
+    g_print("Already in paused state\n");
+    return FALSE;
+  }
+  else if(GST_STATE(player->pipeline) == GST_STATE_PLAYING)
+  {
+    gst_element_set_state(player->pipeline, GST_STATE_PAUSED);
+    return TRUE;
+  }
+  else
+  {
+    g_printerr("Unexpected state of pipeline (pause function)");
+    return FALSE;
+  }
+}
+
+gint player_get_volume_priv(Player *player)
+{
+  gdouble volume;
+  g_object_get(player->volume, "volume", &volume, NULL);
+  return (gint)(volume * 100);
+}
+
+gboolean player_set_volume_priv(Player *player, gint volume)
+{
+  if(volume < 0 || volume > 1000)
+  {
+    g_printerr("Volume should be in range 1-1000\n");
+    return FALSE;
+  }
+  gdouble new_volume = volume / 100.0;
+  g_object_set(player->volume, "volume", (gdouble)volume/100.0, NULL);
+  return TRUE;
+}
+
