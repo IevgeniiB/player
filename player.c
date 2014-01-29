@@ -123,3 +123,34 @@ gboolean player_set_volume(Player *player, gint volume)
     return TRUE;
   return FALSE;
 }
+
+/**
+ * Mute the volume playback
+ */
+gboolean player_mute(Player *player)
+{
+  if(player_mute_priv(player))
+    return TRUE;
+  return FALSE;
+}
+
+/**
+ * Unmute the volume playback
+ */
+gboolean player_unmute(Player *player)
+{
+  if(player_unmute_priv(player))
+    return TRUE;
+  return FALSE;
+}
+
+/**
+ * If volume is muted - unmute the volume
+ * else - mute the volume
+ */
+gboolean player_mute_auto(Player *player)
+{
+  if(player_mute_auto_priv(player))
+    return TRUE;
+  return FALSE;
+}

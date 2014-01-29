@@ -243,6 +243,7 @@ gboolean player_key_handle_init_priv(Player *player)
   key_cb->end = (void *)player_play_pause_priv;
   key_cb->pageup = (void *)volume_increase;
   key_cb->pagedown = (void *)volume_decrease;
+  key_cb->home = (void *)player_mute_auto_priv;
 
   key_cb->data = player;
 
@@ -316,3 +317,36 @@ gboolean player_set_volume_priv(Player *player, gint volume)
   return TRUE;
 }
 
+gboolean player_mute_priv(Player *player)
+{
+  gboolean mute;
+  g_object_get(player->volume, "mute", &mute, NULL);
+  if(mute)
+  {
+    g_printerr("Player is already muted\n");
+    return FALSE;
+  }
+  g_object_set(player->volume, "mute", TRUE, NULL);
+  return TRUE;
+}
+
+gboolean player_unmute_priv(Player *player)
+{
+  gboolean mute;
+  g_object_get(player->volume, "mute", &mute, NULL);
+  if(!mute)
+  {
+    g_printerr("Player is already unmuted\n");
+    return FALSE;
+  }
+  g_object_set(player->volume, "mute", FALSE, NULL);
+  return TRUE;
+}
+
+gboolean player_mute_auto_priv(Player *player)
+{
+  gboolean mute;
+  g_object_get(player->volume, "mute", &mute, NULL);
+  g_object_set(player->volume, "mute", !mute, NULL);
+  return TRUE;
+}

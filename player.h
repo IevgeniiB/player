@@ -34,5 +34,8 @@ gboolean print_tags(Player *player);
 gboolean cb_print_position(Player *player);
 gint player_get_volume(Player *player);
 gboolean player_set_volume(Player *player, gint volume);
+gboolean player_mute(Player *player);
+gboolean player_unmute(Player *player);
+gboolean player_mute_auto(Player *player);
 
 #endif

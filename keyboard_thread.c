@@ -93,6 +93,7 @@ key_handle:
           {
             case 0x48:
               // "Home"
+              key_cb->home(key_cb->data);
               break;
             case 0x46:
               // "End"

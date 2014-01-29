@@ -35,6 +35,9 @@ gboolean player_pause_priv(Player *);
 gboolean player_key_handle_init_priv(Player *);
 gboolean player_free_priv(Player *);
 gint player_get_volume_priv(Player *);
-gboolean player_set_volume_priv(Player *, gint volume);
+gboolean player_set_volume_priv(Player *, gint);
+gboolean player_mute_priv(Player *);
+gboolean player_unmute_priv(Player *);
+gboolean player_mute_auto_priv(Player *);
 
 #endif
