@@ -37,5 +37,6 @@ gboolean player_set_volume(Player *player, gint volume);
 gboolean player_mute(Player *player);
 gboolean player_unmute(Player *player);
 gboolean player_mute_auto(Player *player);
+gchar * player_get_tags(Player *player);
 
 #endif

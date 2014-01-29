@@ -25,7 +25,10 @@ gint main(gint argc, gchar *argv[])
     return -1;
   }
 
-  print_tags(player);
+  gchar *string;
+  string = player_get_tags(player);
+  g_print("%s", string);
+  g_free(string);
 
   g_timeout_add (100, (GSourceFunc) cb_print_position, player);
   

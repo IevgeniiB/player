@@ -52,50 +52,59 @@ gboolean cb_print_position_priv(Player *player)
   return TRUE;
 }
 
-static void print_one_tag_line(const gchar *tag, const GValue *val)
+static gchar * create_one_tag_line(const gchar *tag, const GValue *val)
 {
+  GString *res;
+  res = g_string_new("");
+
   if (G_VALUE_HOLDS_STRING (val)) {
-    g_print ("\t%10s : %s\n", tag, g_value_get_string (val));
+    g_string_printf(res, "%7s : %s\n", tag, g_value_get_string (val));
   } else if (G_VALUE_HOLDS_UINT (val)) {
-    g_print ("\t%10s : %u\n", tag, g_value_get_uint (val));
+    g_string_printf(res, "%7s : %u\n", tag, g_value_get_uint (val));
   } else if (G_VALUE_HOLDS_DOUBLE (val)) {
-    g_print ("\t%10s : %g\n", tag, g_value_get_double (val));
+    g_string_printf(res, "%7s : %g\n", tag, g_value_get_double (val));
   } else if (G_VALUE_HOLDS_BOOLEAN (val)) {
-    g_print ("\t%10s : %s\n", tag,
+    g_string_printf(res, "%7s : %s\n", tag,
         (g_value_get_boolean (val)) ? "true" : "false");
   } else if (GST_VALUE_HOLDS_BUFFER (val)) {
     GstBuffer *buf = gst_value_get_buffer (val);
     guint buffer_size = gst_buffer_get_size (buf);
-    g_print ("\t%10s : buffer of size %u\n", tag, buffer_size);
+    g_string_printf(res, "%7s : buffer of size %u\n", tag, buffer_size);
   } else if (GST_VALUE_HOLDS_DATE_TIME (val)) {
     GstDateTime *dt = g_value_get_boxed (val);
     gchar *dt_str = gst_date_time_to_iso8601_string (dt);
-    g_print ("\t%10s : %s\n", tag, dt_str);
+    g_string_printf(res, "%7s : %s\n", tag, dt_str);
     g_free (dt_str);
   } else {
-    g_print ("\t%10s : tag of type ’%s’\n", tag, G_VALUE_TYPE_NAME (val));
+    g_string_printf(res, "%7s : tag of type ’%s’\n", tag, G_VALUE_TYPE_NAME (val));
   }
+
+  return g_string_free(res, FALSE);
 }
 
-static void print_one_tag (const GstTagList *list, const gchar *tag, gpointer user_data)
+static void create_one_tag (const GstTagList *list, const gchar *tag, gpointer user_data)
 {
   int i, num;
+  GString *res;
+  res = user_data;
+
   num = gst_tag_list_get_tag_size (list, tag);
+
   for (i = 0; i < num; ++i) {
     const GValue *val;
     /* Note: when looking for specific tags, use the gst_tag_list_get_xyz() API,
      * * we only use the GValue approach here because it is more generic */
     val = gst_tag_list_get_value_index (list, tag, i);
     if(g_strrstr(tag, "artist"))
-      print_one_tag_line("Artist", val);
+      g_string_append(res, create_one_tag_line("Artist", val));
     else if(g_strrstr(tag, "title"))
-      print_one_tag_line("Song", val);
+      g_string_append(res, create_one_tag_line("Song", val));
     else if(g_strrstr(tag, "genre"))
-      print_one_tag_line("Genre", val);
+      g_string_append(res, create_one_tag_line("Genre", val));
     else if(g_strrstr(tag, "datetime"))
-      print_one_tag_line("Year", val);
+      g_string_append(res, create_one_tag_line("Year", val));
     else if(g_strrstr(tag, "album"))
-      print_one_tag_line("Album", val);
+      g_string_append(res, create_one_tag_line("Album", val));
   }
 }
 
@@ -184,15 +193,16 @@ gboolean player_init_priv(Player *player, const gchar *arg)
   return TRUE;
 }
 
-gboolean print_tags_priv(Player *player)
+gchar * player_get_tags_priv(Player *player)
 {
   GstMessage *msg;
   GstTagList *tags = NULL;
+  GString *tag_string;
+  tag_string = g_string_new("");
+
   msg = gst_bus_timed_pop_filtered (GST_ELEMENT_BUS (player->pipeline), GST_CLOCK_TIME_NONE, GST_MESSAGE_TAG);
   gst_message_parse_tag (msg, &tags);
-  g_print ("\n");
-  gst_tag_list_foreach (tags, print_one_tag, NULL);
-  g_print ("\n");
+  gst_tag_list_foreach (tags, create_one_tag, tag_string);
   gst_tag_list_unref (tags);
 
   msg = gst_bus_timed_pop_filtered (GST_ELEMENT_BUS (player->pipeline), GST_CLOCK_TIME_NONE, 
@@ -205,6 +215,17 @@ gboolean print_tags_priv(Player *player)
   }
 
   gst_message_unref (msg);
+  return g_string_free(tag_string, FALSE);
+}
+
+
+gboolean print_tags_priv(Player *player)
+{
+  gchar * tag_string = player_get_tags_priv(player);
+  g_print ("\n");
+  g_print("%s", tag_string);
+  g_print ("\n");
+  g_free(tag_string);
   return TRUE;
 }
 

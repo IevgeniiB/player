@@ -154,3 +154,13 @@ gboolean player_mute_auto(Player *player)
     return TRUE;
   return FALSE;
 }
+
+/**
+ * Returns string with tags
+ */
+gchar * player_get_tags(Player *player)
+{
+  gchar * tag_string;
+  tag_string = player_get_tags_priv(player);
+  return tag_string;
+}
