@@ -147,7 +147,7 @@ static void cb_newpad(GstElement *decoder, GstPad *pad, gpointer data)
   g_object_unref(audiopad);
 }
 
-static void on_discovered_cb (GstDiscoverer *discoverer, GstDiscovererInfo *info, GError *err, void *data) {
+static void on_discovered_cb (GstDiscoverer *discoverer, GstDiscovererInfo *info, GError *err, gboolean *data) {
   GstDiscovererResult result;
   const gchar *uri;
   const GstTagList *tags;
@@ -158,9 +158,10 @@ static void on_discovered_cb (GstDiscoverer *discoverer, GstDiscovererInfo *info
 
   if (result != GST_DISCOVERER_OK) {
     g_printerr ("This URI is not an audio file\n");
-    data = FALSE;
+    *data = FALSE;
   }
-  data = TRUE;
+  else
+    *data = TRUE;
 /*
   g_print ("\nDuration: %" GST_TIME_FORMAT "\n", GST_TIME_ARGS (gst_discoverer_info_get_duration (info)));
 
@@ -197,7 +198,8 @@ static gboolean file_is_audio(const gchar *filename)
   GMainLoop *mainloop;
   GError *error = NULL;
   gchar *uri;
-  gboolean is_audio;
+  gboolean *is_audio;
+  is_audio = g_new(gboolean, 1);
 
   if(filename == NULL)
     return FALSE;
@@ -212,7 +214,7 @@ static gboolean file_is_audio(const gchar *filename)
   }
 
   mainloop = g_main_loop_new (NULL, FALSE);
-  g_signal_connect (discoverer, "discovered", G_CALLBACK (on_discovered_cb), &is_audio);
+  g_signal_connect (discoverer, "discovered", G_CALLBACK (on_discovered_cb), is_audio);
   g_signal_connect (discoverer, "finished", G_CALLBACK (on_finished_cb), mainloop);
 
   gst_discoverer_start(discoverer);
@@ -230,10 +232,14 @@ static gboolean file_is_audio(const gchar *filename)
   g_object_unref (discoverer);
   g_main_loop_unref (mainloop);
 
-  return is_audio;
+  if(*is_audio)
+  {
+    g_free(is_audio);
+    return TRUE;
+  }
+  g_free(is_audio);
+  return FALSE;
 }
-
-
 
 gboolean player_init_priv(Player *player, const gchar *arg)
 {
