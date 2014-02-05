@@ -11,7 +11,6 @@ gboolean player_init(Player *player, const gchar *arg)
 {
   if(player_init_priv(player, arg))
     return TRUE;
-  g_printerr("Error in player_init\n");
   return FALSE;
 }
 

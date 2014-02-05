@@ -152,6 +152,8 @@ static void on_discovered_cb (GstDiscoverer *discoverer, GstDiscovererInfo *info
   const gchar *uri;
   const GstTagList *tags;
   GstDiscovererStreamInfo *sinfo;
+  GstCaps *sinfo_caps;
+  gchar *nick;
 
   uri = gst_discoverer_info_get_uri (info);
   result = gst_discoverer_info_get_result (info);
@@ -159,33 +161,31 @@ static void on_discovered_cb (GstDiscoverer *discoverer, GstDiscovererInfo *info
   if (result != GST_DISCOVERER_OK) {
     g_printerr ("This URI is not an audio file\n");
     *data = FALSE;
+    return;
   }
-  else
-    *data = TRUE;
-/*
-  g_print ("\nDuration: %" GST_TIME_FORMAT "\n", GST_TIME_ARGS (gst_discoverer_info_get_duration (info)));
-
-  tags = gst_discoverer_info_get_tags (info);
-  if (tags) {
-    g_print ("Tags:\n");
-    gst_tag_list_foreach (tags, print_tag_foreach, GINT_TO_POINTER (1));
-  }
-
-  g_print ("Seekable: %s\n", (gst_discoverer_info_get_seekable (info) ? "yes" : "no"));
-
-  g_print ("\n");
 
   sinfo = gst_discoverer_info_get_stream_info (info);
   if (!sinfo)
+  {
+    *data = FALSE;
     return;
+  }
 
-  g_print ("Stream information:\n");
+  sinfo_caps = gst_discoverer_stream_info_get_caps(sinfo);
+  nick = gst_caps_to_string(sinfo_caps);
 
-  print_topology (sinfo, 1);
+  if(g_strrstr(nick, "video"))
+  {
+    g_print("Stream type is video\n"
+        "Player works only with audio\n");
+    *data = FALSE;
+  }
+  else
+    *data = TRUE;
 
-  gst_discoverer_stream_info_unref (sinfo);
-
-  g_print ("\n");*/
+  g_free(nick);
+  gst_caps_unref(sinfo_caps);
+  gst_discoverer_stream_info_unref(sinfo);
 }
 
 static void on_finished_cb (GstDiscoverer *discoverer, GMainLoop *mainloop) {
