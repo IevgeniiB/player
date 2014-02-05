@@ -11,7 +11,12 @@ gint main(gint argc, gchar *argv[])
 
   gst_init(&argc, &argv);
   Player *player = g_new(Player, 1);
-  player_init(player, argv[1]);
+  if(!player_init(player, argv[1]))
+  {
+    g_printerr("Terminate\n");
+    g_free(player);
+    return -1;
+  }
   g_unix_signal_add(SIGINT, sigint_handler, player);
 
   GstStateChangeReturn ret;

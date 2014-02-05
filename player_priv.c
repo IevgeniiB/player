@@ -1,4 +1,6 @@
+#include <string.h>
 #include "player_priv.h"
+#include <gst/pbutils/pbutils.h>
 
 void sigint_handler_priv(gpointer data)
 {
@@ -145,8 +147,99 @@ static void cb_newpad(GstElement *decoder, GstPad *pad, gpointer data)
   g_object_unref(audiopad);
 }
 
+static void on_discovered_cb (GstDiscoverer *discoverer, GstDiscovererInfo *info, GError *err, void *data) {
+  GstDiscovererResult result;
+  const gchar *uri;
+  const GstTagList *tags;
+  GstDiscovererStreamInfo *sinfo;
+
+  uri = gst_discoverer_info_get_uri (info);
+  result = gst_discoverer_info_get_result (info);
+
+  if (result != GST_DISCOVERER_OK) {
+    g_printerr ("This URI is not an audio file\n");
+    data = FALSE;
+  }
+  data = TRUE;
+/*
+  g_print ("\nDuration: %" GST_TIME_FORMAT "\n", GST_TIME_ARGS (gst_discoverer_info_get_duration (info)));
+
+  tags = gst_discoverer_info_get_tags (info);
+  if (tags) {
+    g_print ("Tags:\n");
+    gst_tag_list_foreach (tags, print_tag_foreach, GINT_TO_POINTER (1));
+  }
+
+  g_print ("Seekable: %s\n", (gst_discoverer_info_get_seekable (info) ? "yes" : "no"));
+
+  g_print ("\n");
+
+  sinfo = gst_discoverer_info_get_stream_info (info);
+  if (!sinfo)
+    return;
+
+  g_print ("Stream information:\n");
+
+  print_topology (sinfo, 1);
+
+  gst_discoverer_stream_info_unref (sinfo);
+
+  g_print ("\n");*/
+}
+
+static void on_finished_cb (GstDiscoverer *discoverer, GMainLoop *mainloop) {
+  g_main_loop_quit(mainloop);
+}
+
+static gboolean file_is_audio(const gchar *filename)
+{
+  GstDiscoverer *discoverer;
+  GMainLoop *mainloop;
+  GError *error = NULL;
+  gchar *uri;
+  gboolean is_audio;
+
+  if(filename == NULL)
+    return FALSE;
+
+  uri = gst_filename_to_uri(filename, &error);
+  discoverer = gst_discoverer_new (5 * GST_SECOND, &error);
+
+  if (!discoverer) {
+    g_print("Error creating discoverer instance: %s\n", error->message);
+    g_clear_error(&error);
+    return FALSE;
+  }
+
+  mainloop = g_main_loop_new (NULL, FALSE);
+  g_signal_connect (discoverer, "discovered", G_CALLBACK (on_discovered_cb), &is_audio);
+  g_signal_connect (discoverer, "finished", G_CALLBACK (on_finished_cb), mainloop);
+
+  gst_discoverer_start(discoverer);
+
+  if (!gst_discoverer_discover_uri_async (discoverer, uri)) {
+    g_print ("Failed to start discovering URI '%s'\n", uri);
+    g_object_unref (discoverer);
+    return FALSE;
+  }
+
+  g_main_loop_run (mainloop);
+
+  gst_discoverer_stop (discoverer);
+
+  g_object_unref (discoverer);
+  g_main_loop_unref (mainloop);
+
+  return is_audio;
+}
+
+
+
 gboolean player_init_priv(Player *player, const gchar *arg)
 {
+  if(!file_is_audio(arg))
+    return FALSE;
+
   player->thread_run = TRUE;
   player->loop = g_main_loop_new(NULL, FALSE);
 
