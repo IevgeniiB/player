@@ -2,6 +2,10 @@
 
 /**
  * Creates player with default plugins for filesrc or http audio
+ *
+ * @param player pointer to the main Player structure
+ * @param arg the path to the song. File or http
+ * @return operation success
  */ 
 gboolean player_init(Player *player, const gchar *arg)
 {
@@ -66,9 +70,9 @@ void sigint_handler(Player *player)
 /**
  * Prints file tags to the console
  */
-gboolean print_tags(Player *player)
+gboolean player_print_tags(Player *player)
 {
-  if(!print_tags_priv(player))
+  if(!player_print_tags_priv(player))
   {
     g_printerr("Printing tags failed");
     return FALSE;
@@ -151,6 +155,24 @@ gboolean player_unmute(Player *player)
 gboolean player_mute_auto(Player *player)
 {
   if(player_mute_auto_priv(player))
+    return TRUE;
+  return FALSE;
+}
+
+/**
+ * Returns duration of current composition
+ */
+gint64 player_get_duration(Player *player)
+{
+  return player_get_duration_priv(player);
+}
+
+/**
+ * Seek to position in nanoseconds
+ */
+gboolean player_seek(Player *player, gint64 pos)
+{
+  if(player_seek_priv(player, pos))
     return TRUE;
   return FALSE;
 }

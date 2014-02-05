@@ -4,6 +4,8 @@
 #include <stdlib.h>
 #include <gst/gst.h>
 
+#define INDENT "10" /// Indent for tags output in console
+
 /**
  * Structure, that holds all plugins
  */
@@ -30,13 +32,15 @@ gboolean player_pause(Player *player);
 gboolean player_free(Player *player);
 gboolean player_key_handle_init(Player* player);
 void sigint_handler(Player *player);
-gboolean print_tags(Player *player);
+gboolean player_print_tags(Player *player);
 gboolean cb_print_position(Player *player);
 gint player_get_volume(Player *player);
 gboolean player_set_volume(Player *player, gint volume);
 gboolean player_mute(Player *player);
 gboolean player_unmute(Player *player);
 gboolean player_mute_auto(Player *player);
+gint64 player_get_duration(Player* player);
+gboolean player_seek(Player *player, gint64 pos);
 gchar * player_get_tags(Player *player);
 
 #endif

@@ -1,2 +1,1 @@
 To obtain dump_pipeline - modify GST_DEBUG_DUMP_DOT_DIR environment variable
-gcc -o player player.c keyboard_thread.c $(pkg-config --cflags --libs gstreamer-1.0) -g

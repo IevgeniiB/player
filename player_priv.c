@@ -22,6 +22,7 @@ static gboolean bus_watcher(GstBus *bus, GstMessage *message, gpointer data)
       g_error_free (err);
       g_free (debug);
       g_print("\b\bTi\nGood bye!\n");
+      player->thread_run = FALSE;
       g_main_loop_quit (player->loop);
       break;
     }
@@ -29,6 +30,7 @@ static gboolean bus_watcher(GstBus *bus, GstMessage *message, gpointer data)
     {
       /* end-of-stream */
       g_print("\b\bTi\nGood bye!\n");
+      player->thread_run = FALSE;
       g_main_loop_quit (player->loop);
       break;
     }
@@ -39,6 +41,13 @@ static gboolean bus_watcher(GstBus *bus, GstMessage *message, gpointer data)
   return TRUE;
 }
 
+gint64 player_get_duration_priv(Player *player)
+{
+  gint64 len;
+  gst_element_query_duration(player->pipeline, GST_FORMAT_TIME, &len);
+  return len;
+}
+
 gboolean cb_print_position_priv(Player *player)
 {
   gint64 pos, len;
@@ -46,7 +55,7 @@ gboolean cb_print_position_priv(Player *player)
 
   if (gst_element_query_position (pipeline, GST_FORMAT_TIME, &pos)
       && gst_element_query_duration (pipeline, GST_FORMAT_TIME, &len)) {
-    g_print ("Time: %" GST_TIME_FORMAT "\b\b\b\b\b\b\b\b / %" GST_TIME_FORMAT "\b\b\b\b\b\b\b\b         \r", GST_TIME_ARGS (pos), GST_TIME_ARGS (len));
+    g_print ("Time: %" GST_TIME_FORMAT BACKSPACE " / %" GST_TIME_FORMAT BACKSPACE "         \r", GST_TIME_ARGS (pos), GST_TIME_ARGS (len));
   }
   /* call me again */
   return TRUE;
@@ -58,25 +67,25 @@ static gchar * create_one_tag_line(const gchar *tag, const GValue *val)
   res = g_string_new("");
 
   if (G_VALUE_HOLDS_STRING (val)) {
-    g_string_printf(res, "%7s : %s\n", tag, g_value_get_string (val));
+    g_string_printf(res, "%" INDENT "s : %s\n", tag, g_value_get_string (val));
   } else if (G_VALUE_HOLDS_UINT (val)) {
-    g_string_printf(res, "%7s : %u\n", tag, g_value_get_uint (val));
+    g_string_printf(res, "%" INDENT "s : %u\n", tag, g_value_get_uint (val));
   } else if (G_VALUE_HOLDS_DOUBLE (val)) {
-    g_string_printf(res, "%7s : %g\n", tag, g_value_get_double (val));
+    g_string_printf(res, "%" INDENT "s : %g\n", tag, g_value_get_double (val));
   } else if (G_VALUE_HOLDS_BOOLEAN (val)) {
-    g_string_printf(res, "%7s : %s\n", tag,
+    g_string_printf(res, "%" INDENT "s : %s\n", tag,
         (g_value_get_boolean (val)) ? "true" : "false");
   } else if (GST_VALUE_HOLDS_BUFFER (val)) {
     GstBuffer *buf = gst_value_get_buffer (val);
     guint buffer_size = gst_buffer_get_size (buf);
-    g_string_printf(res, "%7s : buffer of size %u\n", tag, buffer_size);
+    g_string_printf(res, "%" INDENT "s : buffer of size %u\n", tag, buffer_size);
   } else if (GST_VALUE_HOLDS_DATE_TIME (val)) {
     GstDateTime *dt = g_value_get_boxed (val);
     gchar *dt_str = gst_date_time_to_iso8601_string (dt);
-    g_string_printf(res, "%7s : %s\n", tag, dt_str);
+    g_string_printf(res, "%" INDENT "s : %s\n", tag, dt_str);
     g_free (dt_str);
   } else {
-    g_string_printf(res, "%7s : tag of type ’%s’\n", tag, G_VALUE_TYPE_NAME (val));
+    g_string_printf(res, "%" INDENT "s : tag of type ’%s’\n", tag, G_VALUE_TYPE_NAME (val));
   }
 
   return g_string_free(res, FALSE);
@@ -219,7 +228,7 @@ gchar * player_get_tags_priv(Player *player)
 }
 
 
-gboolean print_tags_priv(Player *player)
+gboolean player_print_tags_priv(Player *player)
 {
   gchar * tag_string = player_get_tags_priv(player);
   g_print ("\n");
@@ -258,6 +267,21 @@ void volume_decrease(Player* player)
   player_set_volume_priv(player, player_get_volume_priv(player) - 10);
 }
 
+void seek_forw(Player *player)
+{
+  gint64 pos;
+  gst_element_query_position(player->pipeline, GST_FORMAT_TIME, &pos);
+  player_seek_priv(player, pos + SEEK_STEP);
+}
+
+
+void seek_back(Player *player)
+{
+  gint64 pos;
+  gst_element_query_position(player->pipeline, GST_FORMAT_TIME, &pos);
+  player_seek_priv(player, pos - SEEK_STEP);
+}
+
 gboolean player_key_handle_init_priv(Player *player)
 {
   Keyboard_cb *key_cb = (Keyboard_cb *)calloc(1, sizeof(Keyboard_cb));
@@ -265,6 +289,8 @@ gboolean player_key_handle_init_priv(Player *player)
   key_cb->pageup = (void *)volume_increase;
   key_cb->pagedown = (void *)volume_decrease;
   key_cb->home = (void *)player_mute_auto_priv;
+  key_cb->right = (void *)seek_forw;
+  key_cb->left = (void *)seek_back;
 
   key_cb->data = player;
 
@@ -328,9 +354,8 @@ gint player_get_volume_priv(Player *player)
 
 gboolean player_set_volume_priv(Player *player, gint volume)
 {
-  if(volume < 0 || volume > 1000)
+  if(volume < 0 || volume > 100)
   {
-    g_printerr("Volume should be in range 1-1000\n");
     return FALSE;
   }
   gdouble new_volume = volume / 100.0;
@@ -369,5 +394,21 @@ gboolean player_mute_auto_priv(Player *player)
   gboolean mute;
   g_object_get(player->volume, "mute", &mute, NULL);
   g_object_set(player->volume, "mute", !mute, NULL);
+  return TRUE;
+}
+
+gboolean player_seek_priv (Player *player, gint64 pos)
+{
+  GstElement *pipeline = player->pipeline;
+  gint64 len;
+
+  gst_element_query_duration (pipeline, GST_FORMAT_TIME, &len);
+  if (pos > len)
+    pos = len;
+  if (pos < 0)
+    pos = 0;
+  if (!gst_element_seek (pipeline, 1.0, GST_FORMAT_TIME, GST_SEEK_FLAG_FLUSH,
+        GST_SEEK_TYPE_SET, pos, GST_SEEK_TYPE_NONE, GST_CLOCK_TIME_NONE)) 
+    return FALSE;
   return TRUE;
 }

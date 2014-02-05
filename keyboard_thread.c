@@ -76,9 +76,13 @@ key_handle:
               break;
             case 0x43:
               // "Right"
+              key_cb->right(key_cb->data);
+              getkey();
               break;
             case 0x44:
               // "Left"
+              key_cb->left(key_cb->data);
+              getkey();
               break;
             default:
               break;
