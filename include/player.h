@@ -13,8 +13,12 @@ typedef struct {
   GMainLoop *loop;
   GThread *thread;
   gboolean thread_run;
+  gboolean show_tags;
 
   GstBus *bus;
+
+  GList *playlist;
+  gchar *init_song;
 
   GstElement *pipeline;
   GstElement *source;

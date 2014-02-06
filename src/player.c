@@ -185,3 +185,7 @@ gchar * player_get_tags(Player *player)
   tag_string = player_get_tags_priv(player);
   return tag_string;
 }
+
+/**
+ * Initalize playlist from directory
+ */
