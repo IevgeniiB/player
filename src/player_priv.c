@@ -1,4 +1,5 @@
 #include "player_priv.h"
+#include <string.h>
 
 void sigint_handler_priv(gpointer data)
 {
@@ -25,12 +26,12 @@ static gboolean bus_watcher(GstBus *bus, GstMessage *message, gpointer data)
       gst_tag_list_unref (tags);
 
       new_tags = g_string_free(tag_string, FALSE);
-      if(g_strcmp0(new_tags, player->tags))
+      if(g_strcmp0(new_tags, player->tags) && strlen(new_tags) > 0)
       {
         player->tags = new_tags;
         player_print_song(player->playlist->data, NULL);
         g_print("--------------------------------\n");
-        g_print("%s\n", player->tags);
+        g_print("%s", player->tags);
         g_print("--------------------------------\n");
       }
       break;
@@ -274,8 +275,6 @@ gboolean player_next_priv(Player *player)
   gst_element_get_state(player->pipeline, &state, NULL, GST_CLOCK_TIME_NONE);
   gst_element_set_state(player->pipeline, GST_STATE_READY);
   g_object_set(G_OBJECT(player->source), "location", list->data, NULL);
-
-///  player_print_tags_priv(player);
 
   gst_element_set_state(player->pipeline, state);
   player->playlist = list;

@@ -7,8 +7,13 @@ EXECUTABLE=player
 
 all: $(SOURCES) $(EXECUTABLE)
 
+install:
+	make all; \
+		cp ./player /usr/local/bin/player
+
 $(EXECUTABLE): $(OBJECTS)
-	$(CC) $(OBJECTS) -o $@ $(LIBS)
+	$(CC) $(OBJECTS) -o $@ $(LIBS); \
+		make clean
 
 .c.o:
 	$(CC) $(CFLAGS) $< -o $@
