@@ -1,4 +1,3 @@
-#include <string.h>
 #include "player_priv.h"
 
 void sigint_handler_priv(gpointer data)
@@ -14,6 +13,28 @@ static gboolean bus_watcher(GstBus *bus, GstMessage *message, gpointer data)
   Player *player = data;
   switch(GST_MESSAGE_TYPE(message))
   {
+    case GST_MESSAGE_TAG:
+    {
+      gchar *new_tags;
+      GstTagList *tags = NULL;
+      GString *tag_string;
+      tag_string = g_string_new("");
+
+      gst_message_parse_tag (message, &tags);
+      gst_tag_list_foreach (tags, create_one_tag, tag_string);
+      gst_tag_list_unref (tags);
+
+      new_tags = g_string_free(tag_string, FALSE);
+      if(g_strcmp0(new_tags, player->tags))
+      {
+        player->tags = new_tags;
+        player_print_song(player->playlist->data, NULL);
+        g_print("--------------------------------\n");
+        g_print("%s\n", player->tags);
+        g_print("--------------------------------\n");
+      }
+      break;
+    }
     case GST_MESSAGE_ERROR:
     {
       GError *err;
@@ -54,7 +75,9 @@ gboolean cb_print_position_priv(Player *player)
 
   if (gst_element_query_position (pipeline, GST_FORMAT_TIME, &pos)
       && gst_element_query_duration (pipeline, GST_FORMAT_TIME, &len)) {
-    g_print ("Time: %" GST_TIME_FORMAT BACKSPACE " / %" GST_TIME_FORMAT BACKSPACE "         \r", GST_TIME_ARGS (pos), GST_TIME_ARGS (len));
+    //FIXME A HUGE nail
+    g_print ("Time: %" GST_TIME_FORMAT BACKSPACE " / %" GST_TIME_FORMAT BACKSPACE "         \r", 
+        GST_TIME_ARGS (pos), GST_TIME_ARGS (len));
   }
   /* call me again */
   return TRUE;
@@ -251,6 +274,9 @@ gboolean player_next_priv(Player *player)
   gst_element_get_state(player->pipeline, &state, NULL, GST_CLOCK_TIME_NONE);
   gst_element_set_state(player->pipeline, GST_STATE_READY);
   g_object_set(G_OBJECT(player->source), "location", list->data, NULL);
+
+///  player_print_tags_priv(player);
+
   gst_element_set_state(player->pipeline, state);
   player->playlist = list;
   list = NULL;
@@ -331,11 +357,12 @@ gboolean player_init_playlist_from_dir(Player *player)
   return FALSE;
 }
 
-static void player_print_song(gpointer list, gpointer user_data)
+static void player_print_song(gpointer fullname, gpointer user_data)
 {
-  gchar *filename = g_path_get_basename(list);
-  g_print("%s\n", filename);
-  g_free(filename);
+  gchar *name = g_path_get_basename(fullname);
+  //FIXME A HUGE nail
+  g_print("%s                                     \n", name);
+  g_free(name);
 }
 
 void player_print_playlist_priv(Player *player)
@@ -353,6 +380,7 @@ gboolean player_init_priv(Player *player, const gchar *arg)
   player->thread_run = TRUE;
   player->loop = g_main_loop_new(NULL, FALSE);
   player->init_song = g_strdup(arg);
+  player->tags = g_strdup("");
 
   if(g_file_test(arg, G_FILE_TEST_EXISTS) && file_is_audio(arg))
   {
@@ -423,32 +451,8 @@ gboolean player_init_priv(Player *player, const gchar *arg)
 
 gchar * player_get_tags_priv(Player *player)
 {
-  GstMessage *msg;
-  GstTagList *tags = NULL;
-  GString *tag_string;
-  tag_string = g_string_new("");
-  gchar *tag_char;
-
-  msg = gst_bus_timed_pop_filtered (GST_ELEMENT_BUS (player->pipeline), GST_CLOCK_TIME_NONE, GST_MESSAGE_TAG);
-  gst_message_parse_tag (msg, &tags);
-  gst_tag_list_foreach (tags, create_one_tag, tag_string);
-  gst_tag_list_unref (tags);
-
-  msg = gst_bus_timed_pop_filtered (GST_ELEMENT_BUS (player->pipeline), GST_CLOCK_TIME_NONE, 
-      GST_MESSAGE_ASYNC_DONE | GST_MESSAGE_ERROR);
-
-  if (GST_MESSAGE_TYPE (msg) == GST_MESSAGE_ERROR)
-  {
-    g_error ("Got error");
-    return FALSE;
-  }
-
-  gst_message_unref (msg);
-  tag_char = g_string_free(tag_string, FALSE);
-
-  return tag_char;
+  return player->tags;
 }
-
 
 gboolean player_print_tags_priv(Player *player)
 {

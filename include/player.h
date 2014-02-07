@@ -15,6 +15,8 @@ typedef struct {
   gboolean thread_run;
   gboolean show_tags;
 
+  gchar *tags;
+
   GstBus *bus;
 
   GList *playlist;
