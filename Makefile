@@ -1,9 +1,11 @@
 CC=gcc -g
-CFLAGS=-c -I/usr/include/gstreamer-1.0 -I/usr/include/glib-2.0 -I/usr/lib/x86_64-linux-gnu/glib-2.0/include -I./include
-LIBS=-lgstreamer-1.0 -lgobject-2.0 -lgmodule-2.0 -lgthread-2.0 -lglib-2.0 -lgstpbutils-1.0
-SOURCES=player_testsuite.c src/player.c src/player_priv.c src/keyboard_thread.c 
+CFLAGS=$(shell pkg-config --cflags gstreamer-1.0 glib-2.0 gstreamer-pbutils-1.0)
+LIBS=$(shell pkg-config --libs gstreamer-1.0 glib-2.0 gstreamer-pbutils-1.0)
+SOURCES=src/keyboard_thread.c src/player_priv.c src/player.c player_testsuite.c 
 OBJECTS=$(SOURCES:.c=.o)
 EXECUTABLE=player
+
+CFLAGS+=-I./include
 
 all: $(SOURCES) $(EXECUTABLE)
 
@@ -16,7 +18,7 @@ $(EXECUTABLE): $(OBJECTS)
 		make clean
 
 .c.o:
-	$(CC) $(CFLAGS) $< -o $@
+	$(CC) $(CFLAGS) -c $< -o $@  
 
 clean:
 	rm -rf ./src/*.o ./*.o
