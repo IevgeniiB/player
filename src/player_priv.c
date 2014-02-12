@@ -1,4 +1,5 @@
 #include "player_priv.h"
+#include <string.h>
 
 void sigint_handler_priv(gpointer data)
 {
@@ -13,6 +14,28 @@ static gboolean bus_watcher(GstBus *bus, GstMessage *message, gpointer data)
   Player *player = data;
   switch(GST_MESSAGE_TYPE(message))
   {
+    case GST_MESSAGE_TAG:
+    {
+      gchar *new_tags;
+      GstTagList *tags = NULL;
+      GString *tag_string;
+      tag_string = g_string_new("");
+
+      gst_message_parse_tag (message, &tags);
+      gst_tag_list_foreach (tags, create_one_tag, tag_string);
+      gst_tag_list_unref (tags);
+
+      new_tags = g_string_free(tag_string, FALSE);
+      if(g_strcmp0(new_tags, player->tags) && strlen(new_tags) > 0)
+      {
+        player->tags = new_tags;
+        player_print_song(player->playlist->data, NULL);
+        g_print("--------------------------------\n");
+        g_print("%s", player->tags);
+        g_print("--------------------------------\n");
+      }
+      break;
+    }
     case GST_MESSAGE_ERROR:
     {
       GError *err;
@@ -29,9 +52,7 @@ static gboolean bus_watcher(GstBus *bus, GstMessage *message, gpointer data)
     case GST_MESSAGE_EOS:
     {
       /* end-of-stream */
-      g_print("\b\bTi\nGood bye!\n");
-      player->thread_run = FALSE;
-      g_main_loop_quit (player->loop);
+      player_next_priv(player);
       break;
     }
     default:
@@ -55,7 +76,9 @@ gboolean cb_print_position_priv(Player *player)
 
   if (gst_element_query_position (pipeline, GST_FORMAT_TIME, &pos)
       && gst_element_query_duration (pipeline, GST_FORMAT_TIME, &len)) {
-    g_print ("Time: %" GST_TIME_FORMAT BACKSPACE " / %" GST_TIME_FORMAT BACKSPACE "         \r", GST_TIME_ARGS (pos), GST_TIME_ARGS (len));
+    //FIXME A HUGE nail
+    g_print ("Time: %" GST_TIME_FORMAT BACKSPACE " / %" GST_TIME_FORMAT BACKSPACE "         \r", 
+        GST_TIME_ARGS (pos), GST_TIME_ARGS (len));
   }
   /* call me again */
   return TRUE;
@@ -145,10 +168,238 @@ static void cb_newpad(GstElement *decoder, GstPad *pad, gpointer data)
   g_object_unref(audiopad);
 }
 
+static void on_discovered_cb (GstDiscoverer *discoverer, GstDiscovererInfo *info, GError *err, gboolean *data) {
+  GstDiscovererResult result;
+  const gchar *uri;
+  const GstTagList *tags;
+  GstDiscovererStreamInfo *sinfo;
+  GstCaps *sinfo_caps;
+  gchar *nick;
+
+  uri = gst_discoverer_info_get_uri (info);
+  result = gst_discoverer_info_get_result (info);
+
+  if (result != GST_DISCOVERER_OK) {
+    *data = FALSE;
+    return;
+  }
+
+  sinfo = gst_discoverer_info_get_stream_info (info);
+  if (!sinfo)
+  {
+    *data = FALSE;
+    gst_discoverer_stream_info_unref(sinfo);
+    return;
+  }
+
+  sinfo_caps = gst_discoverer_stream_info_get_caps(sinfo);
+  nick = gst_caps_to_string(sinfo_caps);
+
+  if(g_strrstr(nick, "video"))
+  {
+    *data = FALSE;
+  }
+  else
+    *data = TRUE;
+
+  g_free(nick);
+  gst_caps_unref(sinfo_caps);
+  gst_discoverer_stream_info_unref(sinfo);
+}
+
+static void on_finished_cb (GstDiscoverer *discoverer, GMainLoop *mainloop) {
+  g_main_loop_quit(mainloop);
+}
+
+static gboolean file_is_audio(const gchar *filename)
+{
+  GstDiscoverer *discoverer;
+  GMainLoop *mainloop;
+  GError *error = NULL;
+  gchar *uri;
+  gboolean *is_audio;
+  is_audio = g_new(gboolean, 1);
+
+  if(filename == NULL)
+    return FALSE;
+
+  uri = gst_filename_to_uri(filename, &error);
+  discoverer = gst_discoverer_new (5 * GST_SECOND, &error);
+
+  if (!discoverer) {
+    g_print("Error creating discoverer instance: %s\n", error->message);
+    g_clear_error(&error);
+    return FALSE;
+  }
+
+  mainloop = g_main_loop_new (NULL, FALSE);
+  g_signal_connect (discoverer, "discovered", G_CALLBACK (on_discovered_cb), is_audio);
+  g_signal_connect (discoverer, "finished", G_CALLBACK (on_finished_cb), mainloop);
+
+  gst_discoverer_start(discoverer);
+
+  if (!gst_discoverer_discover_uri_async (discoverer, uri)) {
+    g_print ("Failed to start discovering URI '%s'\n", uri);
+    g_object_unref (discoverer);
+    return FALSE;
+  }
+
+  g_main_loop_run (mainloop);
+
+  gst_discoverer_stop (discoverer);
+
+  g_object_unref (discoverer);
+  g_main_loop_unref (mainloop);
+
+  if(*is_audio)
+  {
+    g_free(is_audio);
+    return TRUE;
+  }
+  g_free(is_audio);
+  return FALSE;
+}
+
+gboolean player_next_priv(Player *player)
+{
+  GList *list;
+  GstState state;
+
+  list = player->playlist;
+  list = g_list_next(list);
+  if(!list)
+    list = g_list_first(player->playlist);
+
+  if(!list)
+    return FALSE;
+
+  gst_element_get_state(player->pipeline, &state, NULL, GST_CLOCK_TIME_NONE);
+  gst_element_set_state(player->pipeline, GST_STATE_READY);
+  g_object_set(G_OBJECT(player->source), "location", list->data, NULL);
+
+  gst_element_set_state(player->pipeline, state);
+  player->playlist = list;
+  list = NULL;
+  g_free(list);
+}
+
+gboolean player_prev_priv(Player *player)
+{
+  GList *list;
+  GstState state;
+
+  list = player->playlist;
+  list = g_list_previous(list);
+  if(!list)
+    list = g_list_last(player->playlist);
+
+  if(!list)
+    return FALSE;
+
+  gst_element_get_state(player->pipeline, &state, NULL, GST_CLOCK_TIME_NONE);
+  gst_element_set_state(player->pipeline, GST_STATE_READY);
+  g_object_set(G_OBJECT(player->source), "location", list->data, NULL);
+  gst_element_set_state(player->pipeline, state);
+  player->playlist = list;
+  list = NULL;
+  g_free(list);
+}
+
+gboolean player_init_playlist_from_dir_priv(Player *player)
+{
+  GDir *dir;
+  gchar *file;
+  gchar *filename;
+  guint size;
+  const gchar *dir_name = g_path_get_dirname(player->init_song);
+  gchar *current;
+  if(player->playlist)
+  {
+    current = player->playlist->data;
+  }
+  else
+  {
+    current = NULL;
+  }
+  player->playlist = NULL;
+
+  size = g_list_length(player->playlist);
+  dir = g_dir_open(dir_name, 0, NULL);
+  file = g_strconcat(dir_name, "/", filename = g_strdup(g_dir_read_name(dir)), NULL);
+
+  while(filename)
+  {
+    if(file_is_audio(file) && g_strcmp0(file, player->init_song))
+    {
+      player->playlist = g_list_append(player->playlist, g_strdup(file));
+    }
+    
+    g_free(file);
+    file = g_strconcat(dir_name, "/", filename = g_strdup(g_dir_read_name(dir)), NULL);
+  }
+  g_free(file);
+  
+  if(g_list_length(player->playlist) > size)
+  {
+    player->playlist = g_list_sort(player->playlist, (GCompareFunc)g_ascii_strcasecmp);
+    if(file_is_audio(player->init_song))
+      player->playlist = g_list_prepend(player->playlist, g_strdup(player->init_song));
+    if(file_is_audio(current)){
+      while(g_strcmp0(player->playlist->data, current))
+      {
+        player->playlist = g_list_next(player->playlist);
+      }
+    }
+    g_print("---------New playlist-----------\n");
+    player_print_playlist_priv(player);
+    g_print("--------------------------------\n");
+    return TRUE;
+  }
+  return FALSE;
+}
+
+static void player_print_song(gpointer fullname, gpointer user_data)
+{
+  gchar *name = g_path_get_basename(fullname);
+  //FIXME A HUGE nail
+  g_print("%s                                     \n", name);
+  g_free(name);
+}
+
+void player_print_playlist_priv(Player *player)
+{
+  GList *list; 
+  list = player->playlist;
+  player->playlist = g_list_first(player->playlist);
+  g_list_foreach(player->playlist, (GFunc)player_print_song, NULL);
+  player->playlist = list;
+}
+
+
 gboolean player_init_priv(Player *player, const gchar *arg)
 {
   player->thread_run = TRUE;
   player->loop = g_main_loop_new(NULL, FALSE);
+  player->init_song = g_strdup(arg);
+  player->tags = g_strdup("");
+
+  if(g_file_test(arg, G_FILE_TEST_EXISTS) && file_is_audio(arg))
+  {
+    player->playlist = g_list_append(player->playlist, g_strdup(arg));
+    g_print("------------Playlist------------\n");
+    player_print_playlist_priv(player);
+    g_print("--------------------------------\n");
+  }
+  else
+  {
+    player_init_playlist_from_dir_priv(player);
+    if(!player->playlist)
+    {
+      g_print("No available audio\n");
+      return FALSE;
+    }
+    player->init_song = player->playlist->data;
+  }
 
   if(g_strrstr(arg, "http"))
   {
@@ -159,7 +410,7 @@ gboolean player_init_priv(Player *player, const gchar *arg)
     player->source = gst_element_factory_make("filesrc", "filesrc0");
   }
 
-  g_object_set(G_OBJECT(player->source), "location", arg, NULL);
+  g_object_set(G_OBJECT(player->source), "location", player->playlist->data, NULL);
   player->decoder = gst_element_factory_make("decodebin", "decoder0");
   g_signal_connect(player->decoder, "pad-added", G_CALLBACK(cb_newpad), player);
   player->audioconv = gst_element_factory_make("audioconvert", "audioconv0");
@@ -204,29 +455,8 @@ gboolean player_init_priv(Player *player, const gchar *arg)
 
 gchar * player_get_tags_priv(Player *player)
 {
-  GstMessage *msg;
-  GstTagList *tags = NULL;
-  GString *tag_string;
-  tag_string = g_string_new("");
-
-  msg = gst_bus_timed_pop_filtered (GST_ELEMENT_BUS (player->pipeline), GST_CLOCK_TIME_NONE, GST_MESSAGE_TAG);
-  gst_message_parse_tag (msg, &tags);
-  gst_tag_list_foreach (tags, create_one_tag, tag_string);
-  gst_tag_list_unref (tags);
-
-  msg = gst_bus_timed_pop_filtered (GST_ELEMENT_BUS (player->pipeline), GST_CLOCK_TIME_NONE, 
-      GST_MESSAGE_ASYNC_DONE | GST_MESSAGE_ERROR);
-
-  if (GST_MESSAGE_TYPE (msg) == GST_MESSAGE_ERROR)
-  {
-    g_error ("Got error");
-    return FALSE;
-  }
-
-  gst_message_unref (msg);
-  return g_string_free(tag_string, FALSE);
+  return player->tags;
 }
-
 
 gboolean player_print_tags_priv(Player *player)
 {
@@ -291,6 +521,9 @@ gboolean player_key_handle_init_priv(Player *player)
   key_cb->home = (void *)player_mute_auto_priv;
   key_cb->right = (void *)seek_forw;
   key_cb->left = (void *)seek_back;
+  key_cb->up = (void *)player_prev_priv;
+  key_cb->down = (void *)player_next_priv;
+  key_cb->insert = (void *)player_init_playlist_from_dir_priv;
 
   key_cb->data = player;
 
@@ -360,6 +593,7 @@ gboolean player_set_volume_priv(Player *player, gint volume)
   }
   gdouble new_volume = volume / 100.0;
   g_object_set(player->volume, "volume", (gdouble)volume/100.0, NULL);
+
   return TRUE;
 }
 

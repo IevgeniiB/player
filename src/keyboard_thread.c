@@ -70,9 +70,13 @@ key_handle:
               break;
             case 0x41:
               // "Up"
+              key_cb->up(key_cb->data);
+              getkey();
               break;
             case 0x42:
               // "Down"
+              key_cb->down(key_cb->data);
+              getkey();
               break;
             case 0x43:
               // "Right"

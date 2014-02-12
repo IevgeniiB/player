@@ -11,7 +11,6 @@ gboolean player_init(Player *player, const gchar *arg)
 {
   if(player_init_priv(player, arg))
     return TRUE;
-  g_printerr("Error in player_init");
   return FALSE;
 }
 
@@ -185,4 +184,42 @@ gchar * player_get_tags(Player *player)
   gchar * tag_string;
   tag_string = player_get_tags_priv(player);
   return tag_string;
+}
+
+/**
+ * Initalize playlist from directory
+ */
+gboolean player_init_playlist_from_dir(Player *player)
+{
+  if(player_init_playlist_from_dir(player))
+    return TRUE;
+  return FALSE;
+}
+
+/**
+ * Start playing the next song 
+ */
+gboolean player_next(Player *player)
+{
+  if(player_next_priv(player))
+    return TRUE;
+  return FALSE;
+}
+
+/**
+ * Start playing the previous song 
+ */
+gboolean player_prev(Player *player)
+{
+  if(player_prev_priv(player))
+    return TRUE;
+  return FALSE;
+}
+
+/**
+ * Print playlist
+ */
+void player_print_playlist(Player *player)
+{
+  player_print_playlist_priv(player);
 }
