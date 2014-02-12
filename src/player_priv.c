@@ -270,7 +270,8 @@ gboolean player_next_priv(Player *player)
   if(!list)
     list = g_list_first(player->playlist);
 
-  //TODO Check if list is still NULL
+  if(!list)
+    return FALSE;
 
   gst_element_get_state(player->pipeline, &state, NULL, GST_CLOCK_TIME_NONE);
   gst_element_set_state(player->pipeline, GST_STATE_READY);
@@ -292,7 +293,8 @@ gboolean player_prev_priv(Player *player)
   if(!list)
     list = g_list_last(player->playlist);
 
-  //TODO Check if list is still NULL
+  if(!list)
+    return FALSE;
 
   gst_element_get_state(player->pipeline, &state, NULL, GST_CLOCK_TIME_NONE);
   gst_element_set_state(player->pipeline, GST_STATE_READY);
@@ -391,10 +393,13 @@ gboolean player_init_priv(Player *player, const gchar *arg)
   else
   {
     player_init_playlist_from_dir(player);
+    if(!player->playlist)
+    {
+      g_print("No available audio\n");
+      return FALSE;
+    }
     player->init_song = player->playlist->data;
   }
-
-  //TODO Check if playlist is NULL
 
   if(g_strrstr(arg, "http"))
   {
