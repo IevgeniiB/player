@@ -51,7 +51,7 @@ gboolean player_mute_priv(Player *);
 gboolean player_unmute_priv(Player *);
 gboolean player_mute_auto_priv(Player *);
 gboolean player_seek_priv(Player *, gint64);
-gboolean player_init_playlist_from_dir(Player *);
+gboolean player_init_playlist_from_dir_priv(Player *);
 gboolean player_next_priv(Player *);
 gboolean player_prev_priv(Player *);
 void player_print_playlist_priv(Player *);

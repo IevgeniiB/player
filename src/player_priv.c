@@ -305,7 +305,7 @@ gboolean player_prev_priv(Player *player)
   g_free(list);
 }
 
-gboolean player_init_playlist_from_dir(Player *player)
+gboolean player_init_playlist_from_dir_priv(Player *player)
 {
   GDir *dir;
   gchar *file;
@@ -392,7 +392,7 @@ gboolean player_init_priv(Player *player, const gchar *arg)
   }
   else
   {
-    player_init_playlist_from_dir(player);
+    player_init_playlist_from_dir_priv(player);
     if(!player->playlist)
     {
       g_print("No available audio\n");
@@ -523,7 +523,7 @@ gboolean player_key_handle_init_priv(Player *player)
   key_cb->left = (void *)seek_back;
   key_cb->up = (void *)player_prev_priv;
   key_cb->down = (void *)player_next_priv;
-  key_cb->insert = (void *)player_init_playlist_from_dir;
+  key_cb->insert = (void *)player_init_playlist_from_dir_priv;
 
   key_cb->data = player;
 

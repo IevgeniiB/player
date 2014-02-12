@@ -48,5 +48,9 @@ gboolean player_mute_auto(Player *player);
 gint64 player_get_duration(Player* player);
 gboolean player_seek(Player *player, gint64 pos);
 gchar * player_get_tags(Player *player);
+gboolean player_init_playlist_from_dir(Player *player);
+gboolean player_next(Player *player);
+gboolean player_prev(Player *player);
+void player_print_playlist(Player *player);
 
 #endif

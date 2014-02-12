@@ -189,3 +189,37 @@ gchar * player_get_tags(Player *player)
 /**
  * Initalize playlist from directory
  */
+gboolean player_init_playlist_from_dir(Player *player)
+{
+  if(player_init_playlist_from_dir(player))
+    return TRUE;
+  return FALSE;
+}
+
+/**
+ * Start playing the next song 
+ */
+gboolean player_next(Player *player)
+{
+  if(player_next_priv(player))
+    return TRUE;
+  return FALSE;
+}
+
+/**
+ * Start playing the previous song 
+ */
+gboolean player_prev(Player *player)
+{
+  if(player_prev_priv(player))
+    return TRUE;
+  return FALSE;
+}
+
+/**
+ * Print playlist
+ */
+void player_print_playlist(Player *player)
+{
+  player_print_playlist_priv(player);
+}
