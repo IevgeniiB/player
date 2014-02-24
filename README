@@ -1,1 +1,13 @@
 To obtain dump_pipeline - modify GST_DEBUG_DUMP_DOT_DIR environment variable
+
+To build:
+  cmake .
+  make
+To install:
+  make install
+To build rpm package:
+  make package
+Some rpm tricks:
+  rpm -ivh ./player # install
+  rpm -qa # list all packages
+  rpm -e <package> # remove package, name obtain from listing of all packages
