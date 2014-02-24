@@ -182,7 +182,9 @@ gboolean player_seek(Player *player, gint64 pos)
 gchar * player_get_tags(Player *player)
 {
   gchar * tag_string;
-  tag_string = player_get_tags_priv(player);
+  // Using macro to avoid warning (casting from integer to pointer)
+  // Probably this is a bug of glib
+  tag_string = GINT_TO_POINTER(player_get_tags_priv(player));
   return tag_string;
 }
 
