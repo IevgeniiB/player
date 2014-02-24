@@ -313,7 +313,7 @@ gboolean player_init_playlist_from_dir_priv(Player *player)
   guint size;
   const gchar *dir_name = g_path_get_dirname(player->init_song);
   gchar *current;
-  if(player->playlist)
+  if(player->playlist != NULL)
   {
     current = player->playlist->data;
   }
