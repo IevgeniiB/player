@@ -195,7 +195,7 @@ static void on_discovered_cb (GstDiscoverer *discoverer, GstDiscovererInfo *info
   sinfo_caps = gst_discoverer_stream_info_get_caps(sinfo);
   nick = gst_caps_to_string(sinfo_caps);
 
-  if(g_strrstr(nick, "video"))
+  if(g_strrstr(nick, "video") || g_strrstr(nick, "image"))
   {
     *data = FALSE;
   }
@@ -313,7 +313,7 @@ gboolean player_init_playlist_from_dir_priv(Player *player)
   guint size;
   const gchar *dir_name = g_path_get_dirname(player->init_song);
   gchar *current;
-  if(player->playlist)
+  if(player->playlist != NULL)
   {
     current = player->playlist->data;
   }
