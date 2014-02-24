@@ -17,3 +17,5 @@ set(EXTRA_LIBS ${EXTRA_LIBS} player_lib)
 
 add_executable(player player_testsuite.c)
 target_link_libraries(player ${EXTRA_LIBS} ${GST_LDFLAGS} ${GSTPB_LDFLAGS} ${GLIB_LDFLAGS})
+
+install(TARGETS player DESTINATION /usr/local/bin/)
