@@ -199,7 +199,7 @@ gboolean player_init_playlist_from_dir(Player *player)
 }
 
 /**
- * Start playing the next song 
+ * Start playing the next song
  */
 gboolean player_next(Player *player)
 {
@@ -209,11 +209,22 @@ gboolean player_next(Player *player)
 }
 
 /**
- * Start playing the previous song 
+ * Start playing the previous song
  */
 gboolean player_prev(Player *player)
 {
   if(player_prev_priv(player))
+    return TRUE;
+  return FALSE;
+}
+
+/**
+ * Delete current song from playlist
+ * Print new playlist
+ */
+gboolean player_delete_current(Player *player)
+{
+  if(player_delete_current_priv(player))
     return TRUE;
   return FALSE;
 }
@@ -225,3 +236,4 @@ void player_print_playlist(Player *player)
 {
   player_print_playlist_priv(player);
 }
+

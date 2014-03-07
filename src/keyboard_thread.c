@@ -38,9 +38,15 @@ void *keyboard_thread(void *arg)
 
   for (;;) {
     key = getkey();
-    
+
 key_handle:
     if(key != -1) {
+      if(key == 0x0a)
+      {
+        key_cb->enter(key_cb->data);
+        // "Enter"
+        getkey();
+      }
       if(key == 0x1b)
       {
         key = getkey();
@@ -55,6 +61,7 @@ key_handle:
               getkey();
               break;
             case 0x33:
+              key_cb->delete(key_cb->data);
               // "Delete"
               getkey();
               break;

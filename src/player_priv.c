@@ -338,7 +338,7 @@ gboolean player_init_playlist_from_dir_priv(Player *player)
     file = g_strconcat(dir_name, "/", filename = g_strdup(g_dir_read_name(dir)), NULL);
   }
   g_free(file);
-  
+
   if(g_list_length(player->playlist) > size)
   {
     player->playlist = g_list_sort(player->playlist, (GCompareFunc)g_ascii_strcasecmp);
@@ -368,11 +368,18 @@ static void player_print_song(gpointer fullname, gpointer user_data)
 
 void player_print_playlist_priv(Player *player)
 {
-  GList *list; 
+  GList *list;
   list = player->playlist;
   player->playlist = g_list_first(player->playlist);
   g_list_foreach(player->playlist, (GFunc)player_print_song, NULL);
   player->playlist = list;
+}
+
+static void player_show_playlist_priv(Player *player)
+{
+  g_print("------------Playlist------------\n");
+  player_print_playlist_priv(player);
+  g_print("--------------------------------\n");
 }
 
 
@@ -524,6 +531,8 @@ gboolean player_key_handle_init_priv(Player *player)
   key_cb->up = (void *)player_prev_priv;
   key_cb->down = (void *)player_next_priv;
   key_cb->insert = (void *)player_init_playlist_from_dir_priv;
+  key_cb->delete = (void *)player_delete_current_priv;
+  key_cb->enter = (void *)player_show_playlist_priv;
 
   key_cb->data = player;
 
@@ -631,6 +640,17 @@ gboolean player_mute_auto_priv(Player *player)
   return TRUE;
 }
 
+gboolean player_delete_current_priv(Player *player)
+{
+  player_next_priv(player);
+  player->playlist = g_list_remove_link(player->playlist, player->playlist->prev);
+  g_print("------------Updated-------------\n");
+  player_print_playlist_priv(player);
+  g_print("--------------------------------\n");
+
+  return TRUE;
+}
+
 gboolean player_seek_priv (Player *player, gint64 pos)
 {
   GstElement *pipeline = player->pipeline;
@@ -642,7 +662,7 @@ gboolean player_seek_priv (Player *player, gint64 pos)
   if (pos < 0)
     pos = 0;
   if (!gst_element_seek (pipeline, 1.0, GST_FORMAT_TIME, GST_SEEK_FLAG_FLUSH,
-        GST_SEEK_TYPE_SET, pos, GST_SEEK_TYPE_NONE, GST_CLOCK_TIME_NONE)) 
+        GST_SEEK_TYPE_SET, pos, GST_SEEK_TYPE_NONE, GST_CLOCK_TIME_NONE))
     return FALSE;
   return TRUE;
 }

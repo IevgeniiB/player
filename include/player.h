@@ -51,6 +51,7 @@ gchar * player_get_tags(Player *player);
 gboolean player_init_playlist_from_dir(Player *player);
 gboolean player_next(Player *player);
 gboolean player_prev(Player *player);
+gboolean player_delete_current_song(Player *player);
 void player_print_playlist(Player *player);
 
 #endif

@@ -11,7 +11,6 @@ pkg_check_modules(GLIB REQUIRED glib-2.0)
 include_directories(${GST_INCLUDE_DIRS} ${GSTPB_INCLUDE_DIRS} ${GLIB_INCLUDE_DIRS})
 link_directories(${GST_LIBRARY_DIRS} ${GSTPB_LIBRARY_DIRS} ${GLIB_LIBRARY_DIRS})
 
-include_directories("${PROJECT_BINARY_DIR}")
 include_directories("${PROJECT_BINARY_DIR}/include/")
 add_subdirectory(src)
 set(EXTRA_LIBS ${EXTRA_LIBS} player_lib)

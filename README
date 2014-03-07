@@ -1,3 +1,13 @@
+Player usage:
+  Up/Down - Prew/Next song
+  Right/Left - Forw/Back seek
+  Insert - update plaulist with all songs in the play directory
+  Home - mute/unmute
+  End - Play/Pause
+  Page Up/Down - volume control (default - 100%)
+  Delete - delete current song from playlist
+  Enter - show playlist
+
 To obtain dump_pipeline - modify GST_DEBUG_DUMP_DOT_DIR environment variable
 
 To build:

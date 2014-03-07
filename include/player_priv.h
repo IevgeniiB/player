@@ -19,6 +19,7 @@ typedef struct {
   void (*pagedown)(void*);
   void (*home)(void*);
   void (*end)(void*);
+  void (*enter)(void*);
 
   void *data;
 } Keyboard_cb;
@@ -54,6 +55,8 @@ gboolean player_seek_priv(Player *, gint64);
 gboolean player_init_playlist_from_dir_priv(Player *);
 gboolean player_next_priv(Player *);
 gboolean player_prev_priv(Player *);
+gboolean player_delete_current_priv(Player *);
 void player_print_playlist_priv(Player *);
+static void player_show_playlist_priv(Player *);
 
 #endif
